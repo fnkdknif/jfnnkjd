@@ -1,0 +1,113 @@
+# Local Knowledge Base - Configuration
+
+# Paths
+paths:
+  data_root: "./data"
+  documents: "./data/documents"
+  indexes: "./data/indexes"
+  cache: "./data/cache"
+  backups: "./data/backups"
+  artifacts: "./data/artifacts"
+  database: "./data/knowledge.db"
+
+# Server
+server:
+  host: "127.0.0.1"
+  port: 8000
+  reload: false
+  workers: 1
+
+# Ollama Integration
+ollama:
+  base_url: "http://localhost:11434"
+  llm_model: "llama3"
+  embedding_model: "nomic-embed-text"
+  temperature: 0.7
+  timeout: 60
+
+# Chunking Strategy
+chunking:
+  method: "hierarchical"  # hierarchical | fixed | semantic
+  chunk_size: 512         # tokens
+  chunk_overlap: 100      # tokens
+  min_chunk_size: 100
+  max_chunk_size: 800
+  preserve_structure: true
+
+# Indexing
+indexing:
+  bm25:
+    enabled: true
+    engine: "whoosh"      # whoosh | tantivy
+  vector:
+    enabled: true
+    engine: "chroma"      # chroma | faiss | lancedb
+    dimension: 768
+    distance_metric: "cosine"
+  incremental: true
+  batch_size: 100
+
+# Search & Retrieval
+search:
+  top_k: 20
+  bm25_weight: 0.5
+  vector_weight: 0.5
+  reranker:
+    enabled: false
+    model: "bge-reranker-mini"
+    top_n: 5
+  merge_adjacent: true
+  merge_threshold: 0.8
+
+# RAG
+rag:
+  max_context_tokens: 4000
+  max_output_tokens: 1000
+  citation_style: "numbered"  # numbered | inline | footnote
+  min_citations: 2
+  max_citations: 6
+
+# Export
+export:
+  default_format: "markdown"  # markdown | html | pdf
+  pdf:
+    engine: "weasyprint"      # weasyprint | playwright | pandoc
+    template: "default"
+    page_size: "A4"
+    margin: "2cm"
+  cache_ttl: 604800           # 7 days in seconds
+
+# Audit & Logging
+audit:
+  enabled: true
+  level: "standard"           # minimal | standard | verbose
+  log_external_calls: true
+  anonymize_queries: true
+
+logging:
+  level: "INFO"               # DEBUG | INFO | WARNING | ERROR
+  format: "json"              # json | text
+  file: "./data/app.log"
+  rotation: "10 MB"
+
+# Security
+security:
+  offline_mode: true
+  allow_external_apis: false
+  whitelist: []
+  max_file_size_mb: 500
+
+# Performance
+performance:
+  max_workers: 4
+  cache_search_results: true
+  cache_ttl: 3600             # 1 hour
+  async_indexing: true
+
+# Features (Toggle Modules)
+features:
+  graph_rag: false
+  asr: false
+  ocr: false
+  mindmap: true
+  study_guide: true
