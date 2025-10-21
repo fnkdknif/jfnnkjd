@@ -156,8 +156,65 @@ def _ingest_file(file_path: Path):
 
         console.print(f"[green]✓[/green] Document saved (ID: {doc.id})")
 
-        # TODO: Index chunks (will implement in Phase 1)
-        console.print("[yellow]⚠[/yellow] Indexing not yet implemented")
+        # Index chunks (Phase 1)
+        from app.core.indexer.bm25_indexer import get_bm25_indexer
+        from app.core.indexer.vector_indexer import get_vector_indexer
+        from app.models.chunks import Chunk
+
+        try:
+            # Convert to Chunk models and save to database
+            chunk_models = []
+            for chunk_data in chunks:
+                chunk = Chunk(
+                    document_id=doc.id,
+                    text=chunk_data.text,
+                    token_count=chunk_data.token_count,
+                    hier_path=chunk_data.hier_path,
+                    level=chunk_data.level,
+                    chunk_index=chunk_data.chunk_index,
+                    page_number=chunk_data.page_number,
+                    page_offset=chunk_data.page_offset,
+                    start_char=chunk_data.start_char,
+                    end_char=chunk_data.end_char,
+                    text_hash=chunk_data.text_hash,
+                    chunk_metadata=chunk_data.metadata or {},
+                )
+                session.add(chunk)
+                chunk_models.append(chunk)
+
+            session.commit()
+            console.print(f"[green]✓[/green] Saved {len(chunk_models)} chunks to database")
+
+            # Refresh to get IDs
+            for chunk in chunk_models:
+                session.refresh(chunk)
+
+            # Index with BM25
+            with console.status("[bold green]Building BM25 index..."):
+                bm25 = get_bm25_indexer()
+                bm25.index_chunks(chunk_models)
+            console.print(f"[green]✓[/green] BM25 index built")
+
+            # Index with vectors (optional, can be slow)
+            if console.input("[yellow]?[/yellow] Build vector index? (y/N): ").lower() == 'y':
+                with console.status("[bold green]Building vector index..."):
+                    vector = get_vector_indexer()
+                    vector.index_chunks(chunk_models, batch_size=5)
+                console.print(f"[green]✓[/green] Vector index built")
+            else:
+                console.print("[yellow]⚠[/yellow] Skipped vector indexing")
+
+            # Update document status
+            doc.status = DocumentStatus.COMPLETED
+            doc.indexed_at = datetime.now()
+            session.commit()
+
+        except Exception as e:
+            logger.error(f"Failed to index chunks", error=str(e))
+            console.print(f"[red]✗[/red] Indexing error: {e}")
+            doc.status = DocumentStatus.FAILED
+            doc.error_message = str(e)
+            session.commit()
 
         session.close()
 
@@ -287,10 +344,73 @@ def info(doc_id: int):
 
 @cli.command()
 @click.argument("query")
-def search(query: str):
-    """Search documents (not yet implemented)."""
-    console.print(f"[yellow]Searching for:[/yellow] {query}")
-    console.print("[red]Search not yet implemented (Phase 1)[/red]")
+@click.option("--top-k", "-k", type=int, default=10, help="Number of results")
+@click.option("--bm25-only", is_flag=True, help="Use only BM25 search")
+@click.option("--vector-only", is_flag=True, help="Use only vector search")
+def search(query: str, top_k: int, bm25_only: bool, vector_only: bool):
+    """
+    Search documents with hybrid retrieval.
+
+    Args:
+        query: Search query
+        top_k: Number of results
+        bm25_only: Use only BM25
+        vector_only: Use only vector search
+    """
+    from app.core.searcher import get_searcher
+
+    console.print(f"\n[bold]Searching:[/bold] {query}\n")
+
+    try:
+        searcher = get_searcher()
+
+        use_bm25 = not vector_only
+        use_vector = not bm25_only
+
+        with console.status("[bold green]Searching..."):
+            results = searcher.search(
+                query=query,
+                top_k=top_k,
+                use_bm25=use_bm25,
+                use_vector=use_vector,
+            )
+
+        if not results:
+            console.print("[yellow]No results found[/yellow]")
+            return
+
+        # Display results
+        from rich.panel import Panel
+        from rich.markdown import Markdown
+
+        for i, result in enumerate(results, 1):
+            # Truncate text for display
+            text = result.text
+            if len(text) > 200:
+                text = text[:200] + "..."
+
+            # Build metadata string
+            meta_parts = [f"Score: {result.score:.3f}"]
+            if result.page_number:
+                meta_parts.append(f"Page: {result.page_number}")
+            if result.chunk_index is not None:
+                meta_parts.append(f"Chunk: {result.chunk_index}")
+            meta_parts.append(f"Source: {result.source}")
+
+            meta_str = " | ".join(meta_parts)
+
+            console.print(Panel(
+                f"{text}\n\n[dim]{meta_str}[/dim]",
+                title=f"Result {i}",
+                border_style="green" if i == 1 else "blue",
+            ))
+
+        console.print(f"\n[bold]Found {len(results)} result(s)[/bold]")
+
+    except Exception as e:
+        logger.error(f"Search failed", error=str(e))
+        console.print(f"[red]✗[/red] Search error: {e}")
+        sys.exit(1)
 
 
 @cli.command()
