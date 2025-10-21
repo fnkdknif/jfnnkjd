@@ -146,7 +146,7 @@ def _ingest_file(file_path: Path):
             word_count=parsed_doc.get_word_count(),
             status=DocumentStatus.PARSING,
             parsed_at=datetime.now(),
-            metadata=parsed_doc.metadata,
+            doc_metadata=parsed_doc.metadata,
             chunk_count=len(chunks),
         )
 
@@ -277,9 +277,9 @@ def info(doc_id: int):
     console.print(f"[bold]Created:[/bold] {doc.created_at}")
     console.print(f"[bold]Updated:[/bold] {doc.updated_at}")
 
-    if doc.metadata:
+    if doc.doc_metadata:
         console.print(f"\n[bold]Metadata:[/bold]")
-        for key, value in doc.metadata.items():
+        for key, value in doc.doc_metadata.items():
             console.print(f"  {key}: {value}")
 
     session.close()

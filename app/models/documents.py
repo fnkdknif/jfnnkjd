@@ -12,6 +12,7 @@ class DocumentType(str, Enum):
     """Supported document types."""
     PDF = "pdf"
     DOCX = "docx"
+    MD = "md"
     MARKDOWN = "markdown"
     HTML = "html"
     TXT = "txt"
@@ -58,7 +59,7 @@ class Document(BaseModel, table=True):
     error_message: Optional[str] = Field(default=None, sa_column=Column(String))
 
     # Structural metadata (JSON)
-    metadata: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    doc_metadata: dict = Field(default_factory=dict, sa_column=Column(JSON))
     # Structure: {"toc": [...], "chapters": [...], "keywords": [...]}
 
     # Indexing statistics
@@ -72,7 +73,7 @@ class DocumentMetadata(BaseModel, table=True):
     """
     __tablename__ = "document_metadata"
 
-    document_id: int = Field(foreign_key="documents.id", nullable=False, index=True)
-    key: str = Field(nullable=False, max_length=100)
-    value: str = Field(nullable=False, sa_column=Column(String))
+    document_id: int = Field(foreign_key="documents.id", index=True)
+    key: str = Field(max_length=100)
+    value: str = Field(sa_column=Column(String, nullable=False))
     value_type: str = Field(default="string", max_length=20)  # string|int|float|json

@@ -53,7 +53,7 @@ class Event(SQLModel, table=True):
     session_id: Optional[str] = Field(default=None, max_length=100)
 
     # Message
-    message: str = Field(nullable=False, sa_column=Column(String))
+    message: str = Field(sa_column=Column(String, nullable=False))
     details: dict = Field(default_factory=dict, sa_column=Column(JSON))
     # Can store: {"file_path": "...", "query": "...", "result_count": 10}
 
@@ -63,4 +63,4 @@ class Event(SQLModel, table=True):
 
     # Error tracking
     error_code: Optional[str] = Field(default=None, max_length=50)
-    stack_trace: Optional[str] = Field(default=None, sa_column=Column(String))
+    stack_trace: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))

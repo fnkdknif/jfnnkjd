@@ -55,7 +55,7 @@ class Audit(SQLModel, table=True):
     response_time_ms: Optional[int] = Field(default=None)
 
     # Metadata
-    metadata: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    audit_metadata: dict = Field(default_factory=dict, sa_column=Column(JSON))
     # Can store: {"model": "gpt-4", "tokens": 1500, "reason": "blocked by policy"}
 
     # Error tracking
