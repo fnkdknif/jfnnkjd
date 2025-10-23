@@ -12,6 +12,7 @@ from whoosh.writing import AsyncWriter
 
 from app.core.config import get_config
 from app.core.logging import get_logger
+from app.core.indexer.chinese_analyzer import ChineseAnalyzer
 from app.models.chunks import Chunk as ChunkModel
 
 logger = get_logger("bm25")
@@ -33,11 +34,11 @@ class BM25Indexer:
         self.index_dir = index_dir or (config.paths.indexes / "bm25")
         self.index_dir.mkdir(parents=True, exist_ok=True)
 
-        # Define schema
+        # Define schema with Chinese analyzer
         self.schema = Schema(
             chunk_id=ID(stored=True, unique=True),
             document_id=ID(stored=True),
-            text=TEXT(stored=True),
+            text=TEXT(stored=True, analyzer=ChineseAnalyzer()),
             hier_path=STORED(),  # Hierarchical path (list)
             page_number=NUMERIC(stored=True),
             chunk_index=NUMERIC(stored=True),
